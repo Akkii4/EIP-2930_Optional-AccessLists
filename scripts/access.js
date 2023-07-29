@@ -19,7 +19,7 @@ async function main() {
   const accessTrx = {
     from: user.address,
     to: caller.address,
-    data: data,
+    data,
     value: 0,
     accessList: [
       {
@@ -35,7 +35,7 @@ async function main() {
   const classicTrx = {
     from: user.address,
     to: caller.address,
-    data: data,
+    data,
     value: 0,
   };
 

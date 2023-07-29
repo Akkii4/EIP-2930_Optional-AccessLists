@@ -82,3 +82,7 @@ The access list is provided to web3.js/ethers as part of the transaction.
 ## Conclusion
 
 Access lists optimize gas costs when transactions access predictable storage across multiple contracts. By pre-declaring the addresses and slots you need, gas savings are possible.
+
+## Note
+
+If there are no cross-contract calls or if storage slots are unknown, then using access is no-brainer as it in turn cost more gas if accessed wrong storage slot.

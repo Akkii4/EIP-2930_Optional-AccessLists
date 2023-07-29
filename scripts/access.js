@@ -32,6 +32,21 @@ async function main() {
     ],
   };
 
+  const incorrectAccess = {
+    from: user.address,
+    to: caller.address,
+    data,
+    value: 0,
+    accessList: [
+      {
+        address: oracle.address,
+        storageKeys: [
+          "0x0000000000000000000000000000000000000000000000000000000000000002",
+        ],
+      },
+    ],
+  };
+
   const classicTrx = {
     from: user.address,
     to: caller.address,
@@ -70,6 +85,14 @@ async function main() {
 
   console.log(
     `2nd same transaction without access list costs: ${classicReceipt2.gasUsed.toString()}`
+  );
+
+  const accessTrxCall3 = await user.sendTransaction(incorrectAccess);
+
+  const receipt3 = await accessTrxCall3.wait();
+
+  console.log(
+    `Transaction with access list but wrong storage slot costs: ${receipt3.gasUsed.toString()}`
   );
 }
 

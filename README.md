@@ -1,75 +1,84 @@
-## Scripts
+# EIP-2930 - Access Lists
 
-This repository includes the following scripts in the `package.json` file:
+EIP-2930 introduces access lists to optimize gas costs for transactions that access storage across multiple contracts.
 
-### Test
+## Background
 
-`npm run test`
+When a transaction calls another contract, it must pay gas to load and check the state of that contract. Accessing storage slots also costs gas.
 
-This command runs the test suite for the contract using the Hardhat testing framework. It will execute the command `npx hardhat test`, which will run all the tests in the project. The tests are used to check that the contract behaves as expected and to ensure that any changes made to the contract don't break existing functionality.
+EIP-2930 allows a transaction to specify an "access list" - the contract addresses and storage slots it will read.
 
-### Test with coverage
+This allows the EVM to only load the required state, skipping unused data.
 
-`npm run test:coverage`
+## How Access Lists Work
 
-This command runs the test suite and generates a coverage report for the contract. It will execute the command `npx hardhat coverage`, which will run all the tests in the project and also generate a coverage report. A coverage report shows how much of the contract's code is being executed by the test suite.
+An access list contains:
 
-### Compile
+- Addresses of contracts called externally
+- Specific storage slots read from those contracts
 
-```
-npm run compile
-```
+For example:
 
-This command compiles the contract using the Hardhat compiler. It will execute the command `npx hardhat compile`, which will compile the contract code, and generate the bytecode and ABI needed to deploy the contract on the Ethereum blockchain.
+```solidity
+// Contract A
+function foo() {
+  // Call contract B
+  B.doSomething()
 
-### Lint TypeScript
-
-```
-npm run lint:js
-```
-
-This command runs the ESLint linter on all TypeScript files in the project. It will execute the command `npx eslint '**/*.js'`, which will check all TypeScript files in the project against a set of linting rules and report any errors or warnings.
-
-### Lint TypeScript and fix issues
-
-```
-npm run lint:js-fix
+  // Read storage slot 1 in B
+  B.slot1();
+}
 ```
 
-This command runs the ESLint linter on all TypeScript files in the project and automatically fix any issues it finds.
-
-### Lint Solidity
+The access list for `A.foo()` would be:
 
 ```
-npm run lint:sol
+[
+  {
+    "address": "0x1234...B", // B's address
+    "storageKeys": [
+      "0x0000000000000000000000000000000000000001" // slot 1
+    ]
+  }
+]
 ```
 
-This command runs the Prettier and Solhint linters on all the Solidity files in the project. It will execute the command `npx prettier '**/*.{json,sol,md}' --check && npx solhint 'contracts/**/*.sol'`, which will check all the solidity files in the project against a set of linting rules and report any errors or warnings.
+When the EVM processes the transaction, it will:
 
-### Lint Solidity and fix issues
+- Pre-load address B as "warm"
+- Pre-load slot 1 as "warm" in B
 
+Storage slots not in the access list are left "cold".
+
+## Gas Savings
+
+Although Access lists incurs an increased intrinsic cost for the transaction, but provides discounts for storage and state access throughout the execution of the transaction.
+
+Access lists let transactions pre-pay the cost for loading storage slots.
+
+- Warm reads are 100 gas
+- Cold reads are 1900 gas
+
+Cross-contract calls also get a discount from 2600 to 2400 gas.
+
+Gas cost comparison based on this project implementation :
+![Alt text](image.png)
+
+## Example Code
+
+Here is example JS code to create a transaction with an access list:
+
+```js
+let tx = {
+  type: 1, // Access list transaction
+  accessList: [...],
+  to: "0x123",
+  ...
+}
 ```
-npm run lint:sol-fix
-```
 
-This command runs the Prettier and Solhint linters on all the Solidity files in the project and automatically fix any issues it finds.
+The access list is provided to web3.js/ethers as part of the transaction.
 
-### Lint all
+## Conclusion
 
-```
-npm run lint
-```
-
-This command runs both TypeScript and Solidity linters in the project.
-
-### Lint all and fix issues
-
-```
-npm run lint:fix
-```
-
-This command runs both TypeScript and Solidity linters in the project and automatically fix any issues it finds.
-
-## Contribution
-
-If you find any issues or have suggestions for improvements, please open an issue or submit a pull request.
+Access lists optimize gas costs when transactions access predictable storage across multiple contracts. By pre-declaring the addresses and slots you need, gas savings are possible.
